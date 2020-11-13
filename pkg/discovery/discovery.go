@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"net"
@@ -9,19 +10,20 @@ import (
 )
 
 const (
-	multicastAddress = "239.12.255.254:9522"
-	discoveryPayload = "534d4100000402a0ffffffff0000002000000000"
+	multicastAddress       = "239.12.255.254:9522"
+	discoveryPayload       = "534d4100000402a0ffffffff0000002000000000"
+	discoveryVerifyPayload = "534d4100000402A000000001000200000001"
 )
 
 // send sends the discovery payload message to the specified udp connection.
 func send(conn net.PacketConn, addr net.Addr) error {
 	// send multicast for discovery
-	bytes, err := hex.DecodeString(discoveryPayload)
+	p, err := hex.DecodeString(discoveryPayload)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.WriteTo(bytes, addr)
+	_, err = conn.WriteTo(p, addr)
 	return err
 }
 
@@ -31,10 +33,15 @@ func listen(conn net.PacketConn, timeout time.Duration) ([]net.Addr, error) {
 		return nil, err
 	}
 
+	verifyPayload, err := hex.DecodeString(discoveryVerifyPayload)
+	if err != nil {
+		return nil, err
+	}
+
 	results := make([]net.Addr, 0)
 	for {
 		buf := make([]byte, 2500)
-		_, addr, err := conn.ReadFrom(buf)
+		n, addr, err := conn.ReadFrom(buf)
 		if err != nil {
 			if errors.Is(err, os.ErrDeadlineExceeded) {
 				break
@@ -42,7 +49,18 @@ func listen(conn net.PacketConn, timeout time.Duration) ([]net.Addr, error) {
 				return nil, err
 			}
 		}
-		results = append(results, addr)
+
+		var contains bool
+		for _, v := range results {
+			if addr == v {
+				contains = true
+				break
+			}
+		}
+
+		if bytes.Compare(buf[0:n], verifyPayload) == 0 && !contains {
+			results = append(results, addr)
+		}
 	}
 
 	return results, nil
