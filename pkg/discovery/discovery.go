@@ -79,12 +79,6 @@ func DiscoverInverters(ifi *net.Interface, timeout time.Duration) ([]net.Addr, e
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		e := conn.Close()
-		if e != nil {
-			panic(e)
-		}
-	}()
 
 	if err := send(conn, addr); err != nil {
 		return nil, err
@@ -93,6 +87,11 @@ func DiscoverInverters(ifi *net.Interface, timeout time.Duration) ([]net.Addr, e
 	addrs, err := listen(conn, timeout)
 	if err != nil {
 		return nil, err
+	}
+
+	e := conn.Close()
+	if e != nil {
+		panic(e)
 	}
 
 	return addrs, nil
