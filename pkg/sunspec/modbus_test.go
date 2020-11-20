@@ -1,4 +1,4 @@
-package readout
+package sunspec
 
 import (
 	"github.com/goburrow/modbus"
