@@ -25,7 +25,7 @@ func TestSunSpecReader_Scan_SMAIntegration(t *testing.T) {
 
 	client := modbus.NewClient(handler)
 
-	s := &SunSpecReader{
+	s := &Reader{
 		ModbusReader: ModbusReader{
 			client,
 		},

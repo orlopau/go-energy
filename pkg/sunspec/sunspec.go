@@ -21,7 +21,7 @@ const (
 	sunsIdentifier uint32 = 0x53756e53
 )
 
-type SunSpecReader struct {
+type Reader struct {
 	ModbusReader ModbusReader
 	Models       map[uint16]uint16
 }
@@ -32,7 +32,7 @@ type SunSpecReader struct {
 //
 // The register specified by the offset must point to the SunSpec Common Model ID.
 // For further information, consult the documentation provided by https://sunspec.org/
-func (t *SunSpecReader) Scan() error {
+func (t *Reader) Scan() error {
 	// scan all base addresses for sunspec identifier
 	var offset uint16
 	for _, address := range sunsBaseAddresses {
@@ -72,7 +72,7 @@ func (t *SunSpecReader) Scan() error {
 }
 
 // getModelAddress returns the modbus address for the given SunSpec model id
-func (t *SunSpecReader) getModelAddress(model uint16) (uint16, error) {
+func (t *Reader) getModelAddress(model uint16) (uint16, error) {
 	address, ok := t.Models[model]
 	if !ok {
 		return 0, fmt.Errorf("the scanned modules do not contain this model with id %d", model)
@@ -80,7 +80,7 @@ func (t *SunSpecReader) getModelAddress(model uint16) (uint16, error) {
 	return address, nil
 }
 
-func (t *SunSpecReader) ReadPointUint16(model, point uint16) (uint16, error) {
+func (t *Reader) ReadPointUint16(model, point uint16) (uint16, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -98,7 +98,7 @@ func (t *SunSpecReader) ReadPointUint16(model, point uint16) (uint16, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointUint32(model, point uint16) (uint32, error) {
+func (t *Reader) ReadPointUint32(model, point uint16) (uint32, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -116,7 +116,7 @@ func (t *SunSpecReader) ReadPointUint32(model, point uint16) (uint32, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointUint64(model, point uint16) (uint64, error) {
+func (t *Reader) ReadPointUint64(model, point uint16) (uint64, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -134,7 +134,7 @@ func (t *SunSpecReader) ReadPointUint64(model, point uint16) (uint64, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointInt16(model, point uint16) (int16, error) {
+func (t *Reader) ReadPointInt16(model, point uint16) (int16, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -152,7 +152,7 @@ func (t *SunSpecReader) ReadPointInt16(model, point uint16) (int16, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointInt32(model, point uint16) (int32, error) {
+func (t *Reader) ReadPointInt32(model, point uint16) (int32, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -170,7 +170,7 @@ func (t *SunSpecReader) ReadPointInt32(model, point uint16) (int32, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointInt64(model, point uint16) (int64, error) {
+func (t *Reader) ReadPointInt64(model, point uint16) (int64, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -188,7 +188,7 @@ func (t *SunSpecReader) ReadPointInt64(model, point uint16) (int64, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointFloat32(model, point uint16) (float32, error) {
+func (t *Reader) ReadPointFloat32(model, point uint16) (float32, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
@@ -206,7 +206,7 @@ func (t *SunSpecReader) ReadPointFloat32(model, point uint16) (float32, error) {
 	return val, nil
 }
 
-func (t *SunSpecReader) ReadPointFloat64(model, point uint16) (float64, error) {
+func (t *Reader) ReadPointFloat64(model, point uint16) (float64, error) {
 	address, err := t.getModelAddress(model)
 	if err != nil {
 		return 0, err
