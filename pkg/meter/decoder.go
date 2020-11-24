@@ -65,11 +65,17 @@ func DecodeTelegram(data []byte) (*EnergyMeterTelegram, error) {
 		return nil, err
 	}
 
+	endIdentifier := OBISIdentifier{}
+
 	// buffer len greater 4 -> another obis identifier and value
 	for buf.Len() > 4 {
 		obis := OBISIdentifier{}
 		if err := binary.Read(buf, binary.BigEndian, &obis); err != nil {
 			return nil, err
+		}
+
+		if obis == endIdentifier {
+			break
 		}
 
 		switch obis.Channel {
