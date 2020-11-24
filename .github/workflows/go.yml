@@ -31,10 +31,14 @@ jobs:
           go get golang.org/x/lint/golint
 
       - name: Test
-        run: go test -v -parallel 4 ./...
+        run: go test -v -parallel 4 -coverprofile=profile.cov ./...
 
       - name: Vet
         run: go vet ./...
 
       - name: Lint
         run: golint ./...
+      
+      - uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: profile.cov
