@@ -15,14 +15,18 @@ type EnergyMeterConnection interface {
 	io.Closer
 }
 
-type EnergyMeter struct {
+type EnergyMeterReader interface {
+	ReadTelegram() (*EnergyMeterTelegram, error)
+}
+
+type energyMeter struct {
 	Conn EnergyMeterConnection
 }
 
 // Listen opens a multicast socket to listen for energymeter messages.
 //
 // Messages can be read using ReadTelegram.
-func Listen() (*EnergyMeter, error) {
+func Listen() (*energyMeter, error) {
 	addr, err := net.ResolveUDPAddr("udp", multicastIP)
 	if err != nil {
 		return nil, err
@@ -33,10 +37,10 @@ func Listen() (*EnergyMeter, error) {
 		return nil, err
 	}
 
-	return &EnergyMeter{Conn: l}, nil
+	return &energyMeter{Conn: l}, nil
 }
 
-func (t *EnergyMeter) Close() error {
+func (t *energyMeter) Close() error {
 	if t.Conn == nil {
 		return fmt.Errorf("no connection to close")
 	}
@@ -46,7 +50,7 @@ func (t *EnergyMeter) Close() error {
 // ReadTelegram reads and decodes an energymeter telegram from the connection.
 //
 // The method blocks until a telegram is received.
-func (t *EnergyMeter) ReadTelegram() (*EnergyMeterTelegram, error) {
+func (t *energyMeter) ReadTelegram() (*EnergyMeterTelegram, error) {
 	if t.Conn == nil {
 		return nil, fmt.Errorf("connection not opened")
 	}
