@@ -5,28 +5,6 @@ import (
 	"math"
 )
 
-// ModelReader represents a service reading models from a SunSpec device.
-type ModelReader interface {
-	ReadPointUint16(model, point uint16) (uint16, error)
-	ReadPointUint32(model, point uint16) (uint32, error)
-	ReadPointUint64(model, point uint16) (uint64, error)
-	ReadPointInt16(model, point uint16) (int16, error)
-	ReadPointInt32(model, point uint16) (int32, error)
-	ReadPointFloat32(model, point uint16) (float32, error)
-	ReadPointFloat64(model, point uint16) (float64, error)
-	HasModel(model uint16) bool
-}
-
-type ModelScanner interface {
-	Scan() error
-}
-
-// ModbusModelReader is an implementation of ModelReader and ModelScanner using modbus tcp.
-type ModbusModelReader struct {
-	ModbusReader ModbusReader
-	Models       map[uint16]uint16
-}
-
 const (
 	// sunsIdentifier is the well-known identifier present at one of the sunsBaseAddresses
 	// if the device is SunSpec compatible.
@@ -43,20 +21,62 @@ var (
 	}
 )
 
-// Scan scans the devices SunSpec Models using the sunsBaseAddresses and stores their addresses.
+// AddressReader is the interface wrapping methods for reading uints types from addresses.
+type AddressReader interface {
+	ReadUint16(address uint16) (uint16, error)
+	ReadUint32(address uint16) (uint32, error)
+	ReadUint64(address uint16) (uint64, error)
+	ReadInt16(address uint16) (int16, error)
+	ReadInt32(address uint16) (int32, error)
+	ReadInt64(address uint16) (int64, error)
+	ReadFloat32(address uint16) (float32, error)
+	ReadFloat64(address uint16) (float64, error)
+	ReadString(address, words uint16) (string, error)
+}
+
+type ModelConverter interface {
+	GetAddress(model uint16) (uint16, error)
+	HasModel(model uint16) (bool, error)
+}
+
+type ModelScanner interface {
+	Scan() (map[uint16]uint16, error)
+}
+
+// ModelReader provides functionality for reading SunSpec models and points.
+type ModelReader struct {
+	Reader    AddressReader
+	Converter ModelConverter
+}
+
+// CachedModelConverter implements ModelConverter by lazily scanning the SunSpec device and caching.
 //
-// This function must be executed prior to reading SunSpec module data.
+// The models are cached until Scan is executed again.
+type CachedModelConverter struct {
+	Scanner ModelScanner
+	models  map[uint16]uint16
+}
+
+type AddressModelScanner struct {
+	Reader interface {
+		ReadUint16(address uint16) (uint16, error)
+		ReadUint32(address uint16) (uint32, error)
+	}
+}
+
+// Scan scans the devices SunSpec models using the sunsBaseAddresses and stores them in the cache.
 //
 // The register specified by the offset must point to the SunSpec Common Model ID.
 // For further information, consult the documentation provided by https://sunspec.org/
-func (t *ModbusModelReader) Scan() error {
-	// scan all base addresses for sunspec identifier
+func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
+	// scan all base addresses for SunSpec identifier
 	var offset uint16
 	for _, address := range sunsBaseAddresses {
-		val, err := t.ModbusReader.ReadUint32(address)
+		val, err := s.Reader.ReadUint32(address)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("couldn't read base address: %w", err)
 		}
+
 		if val == sunsIdentifier {
 			offset = address + 2
 			break
@@ -64,10 +84,11 @@ func (t *ModbusModelReader) Scan() error {
 	}
 
 	models := make(map[uint16]uint16)
+
 	for {
-		modelID, err := t.ModbusReader.ReadUint16(offset)
+		modelID, err := s.Reader.ReadUint16(offset)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if modelID == ^uint16(0) {
@@ -76,171 +97,211 @@ func (t *ModbusModelReader) Scan() error {
 
 		models[modelID] = offset
 
-		l, err := t.ModbusReader.ReadUint16(offset + 1)
+		l, err := s.Reader.ReadUint16(offset + 1)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		offset += l + 2
 	}
 
-	t.Models = models
+	return models, nil
+}
+
+func (c *CachedModelConverter) verifyModels() error {
+	if c.models != nil {
+		return nil
+	}
+
+	models, err := c.Scanner.Scan()
+	if err != nil {
+		return err
+	}
+
+	c.models = models
+
 	return nil
 }
 
-// getModelAddress returns the modbus address for the given SunSpec model id
-func (t *ModbusModelReader) getModelAddress(model uint16) (uint16, error) {
-	address, ok := t.Models[model]
-	if !ok {
-		return 0, fmt.Errorf("the scanned modules do not contain this model with id %d", model)
-	}
-	return address, nil
-}
-
-func (t *ModbusModelReader) HasModel(model uint16) bool {
-	_, ok := t.Models[model]
-	return ok
-}
-
-func (t *ModbusModelReader) ReadPointUint16(model, point uint16) (uint16, error) {
-	address, err := t.getModelAddress(model)
+// GetAddress retrieves the starting address of a SunSpec model.
+func (c *CachedModelConverter) GetAddress(model uint16) (uint16, error) {
+	err := c.verifyModels()
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadUint16(address + point)
+	address, ok := c.models[model]
+	if !ok {
+		return 0, fmt.Errorf("can't find model")
+	}
+
+	return address, nil
+}
+
+// HasModel checks if the SunSpec device implements a given model.
+func (c *CachedModelConverter) HasModel(model uint16) (bool, error) {
+	err := c.verifyModels()
+	if err != nil {
+		return false, err
+	}
+
+	_, ok := c.models[model]
+	return ok, nil
+}
+
+func (r *ModelReader) ReadPointUint16(model, point uint16) (uint16, error) {
+	address, err := r.Converter.GetAddress(model)
+	if err != nil {
+		return 0, err
+	}
+
+	val, err := r.Reader.ReadUint16(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if val == math.MaxUint16 {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointUint32(model, point uint16) (uint32, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointUint32(model, point uint16) (uint32, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadUint32(address + point)
+	val, err := r.Reader.ReadUint32(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if val == math.MaxUint32 {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointUint64(model, point uint16) (uint64, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointUint64(model, point uint16) (uint64, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadUint64(address + point)
+	val, err := r.Reader.ReadUint64(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if val == math.MaxUint64 {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointInt16(model, point uint16) (int16, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointInt16(model, point uint16) (int16, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadInt16(address + point)
+	val, err := r.Reader.ReadInt16(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if val == math.MinInt16 {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointInt32(model, point uint16) (int32, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointInt32(model, point uint16) (int32, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadInt32(address + point)
+	val, err := r.Reader.ReadInt32(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if val == math.MinInt32 {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointInt64(model, point uint16) (int64, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointInt64(model, point uint16) (int64, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadInt64(address + point)
+	val, err := r.Reader.ReadInt64(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if val == math.MinInt64 {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointFloat32(model, point uint16) (float32, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointFloat32(model, point uint16) (float32, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadFloat32(address + point)
+	val, err := r.Reader.ReadFloat32(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if math.IsNaN(float64(val)) {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
 	}
 
 	return val, nil
 }
 
-func (t *ModbusModelReader) ReadPointFloat64(model, point uint16) (float64, error) {
-	address, err := t.getModelAddress(model)
+func (r *ModelReader) ReadPointFloat64(model, point uint16) (float64, error) {
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := t.ModbusReader.ReadFloat64(address + point)
+	val, err := r.Reader.ReadFloat64(address + point)
 	if err != nil {
 		return 0, err
 	}
 
 	if math.IsNaN(val) {
-		return 0, fmt.Errorf("data point with id %d in model with id %d is not implemented", point, model)
+		return 0, fmt.Errorf("uints point with id %d in model with id %d is not implemented", point, model)
+	}
+
+	return val, nil
+}
+
+func (r *ModelReader) ReadString(model, point, words uint16) (string, error) {
+	address, err := r.Converter.GetAddress(model)
+	if err != nil {
+		return "", err
+	}
+
+	val, err := r.Reader.ReadString(address+point, words)
+	if err != nil {
+		return "", err
 	}
 
 	return val, nil
