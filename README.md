@@ -1,7 +1,7 @@
 # GoEnergy
 
 ![Build](https://github.com/orlopau/go-energy/workflows/build/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/orlopau/go-energy/badge.svg?branch=master)](https://coveralls.io/github/orlopau/sma-inverter-reader?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/orlopau/go-energy/badge.svg?branch=master)](https://coveralls.io/github/orlopau/go-energy?branch=master)
 
 GoEnergy provides libraries for interacting with different renewable-energy related devices.
 
