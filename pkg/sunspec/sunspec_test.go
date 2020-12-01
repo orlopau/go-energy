@@ -2,7 +2,7 @@ package sunspec_test
 
 import (
 	"fmt"
-	"github.com/orlopau/sma-inverter-reader/pkg/sunspec"
+	"github.com/orlopau/go-energy/pkg/sunspec"
 	"math"
 	"testing"
 )
