@@ -21,7 +21,7 @@ var (
 	}
 )
 
-// AddressReader is the interface wrapping methods for reading uints types from addresses.
+// AddressReader is a interface wrapping methods for reading types from addresses.
 type AddressReader interface {
 	ReadUint16(address uint16) (uint16, error)
 	ReadUint32(address uint16) (uint32, error)
@@ -43,22 +43,23 @@ type ModelScanner interface {
 	Scan() (map[uint16]uint16, error)
 }
 
-// ModelReader provides functionality for reading SunSpec models and points.
+// ModelReader provides functionality reading SunSpec models and points.
 type ModelReader struct {
-	Reader    AddressReader
-	Converter ModelConverter
+	AddressReader  AddressReader
+	ModelConverter ModelConverter
 }
 
 // CachedModelConverter implements ModelConverter by lazily scanning the SunSpec device and caching.
 //
 // The models are cached until Scan is executed again.
 type CachedModelConverter struct {
-	Scanner ModelScanner
-	models  map[uint16]uint16
+	ModelScanner ModelScanner
+	models       map[uint16]uint16
 }
 
+// AddressModelScanner implements ModelScanner scanning the device using the SunSpec specification.
 type AddressModelScanner struct {
-	Reader interface {
+	UIntReader interface {
 		ReadUint16(address uint16) (uint16, error)
 		ReadUint32(address uint16) (uint32, error)
 	}
@@ -72,7 +73,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	// scan all base addresses for SunSpec identifier
 	var offset uint16
 	for _, address := range sunsBaseAddresses {
-		val, err := s.Reader.ReadUint32(address)
+		val, err := s.UIntReader.ReadUint32(address)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't read base address: %w", err)
 		}
@@ -86,7 +87,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	models := make(map[uint16]uint16)
 
 	for {
-		modelID, err := s.Reader.ReadUint16(offset)
+		modelID, err := s.UIntReader.ReadUint16(offset)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +98,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 
 		models[modelID] = offset
 
-		l, err := s.Reader.ReadUint16(offset + 1)
+		l, err := s.UIntReader.ReadUint16(offset + 1)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +114,7 @@ func (c *CachedModelConverter) verifyModels() error {
 		return nil
 	}
 
-	models, err := c.Scanner.Scan()
+	models, err := c.ModelScanner.Scan()
 	if err != nil {
 		return err
 	}
@@ -150,12 +151,12 @@ func (c *CachedModelConverter) HasModel(model uint16) (bool, error) {
 }
 
 func (r *ModelReader) ReadPointUint16(model, point uint16) (uint16, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadUint16(address + point)
+	val, err := r.AddressReader.ReadUint16(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -168,12 +169,12 @@ func (r *ModelReader) ReadPointUint16(model, point uint16) (uint16, error) {
 }
 
 func (r *ModelReader) ReadPointUint32(model, point uint16) (uint32, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadUint32(address + point)
+	val, err := r.AddressReader.ReadUint32(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -186,12 +187,12 @@ func (r *ModelReader) ReadPointUint32(model, point uint16) (uint32, error) {
 }
 
 func (r *ModelReader) ReadPointUint64(model, point uint16) (uint64, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadUint64(address + point)
+	val, err := r.AddressReader.ReadUint64(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -204,12 +205,12 @@ func (r *ModelReader) ReadPointUint64(model, point uint16) (uint64, error) {
 }
 
 func (r *ModelReader) ReadPointInt16(model, point uint16) (int16, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadInt16(address + point)
+	val, err := r.AddressReader.ReadInt16(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -222,12 +223,12 @@ func (r *ModelReader) ReadPointInt16(model, point uint16) (int16, error) {
 }
 
 func (r *ModelReader) ReadPointInt32(model, point uint16) (int32, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadInt32(address + point)
+	val, err := r.AddressReader.ReadInt32(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -240,12 +241,12 @@ func (r *ModelReader) ReadPointInt32(model, point uint16) (int32, error) {
 }
 
 func (r *ModelReader) ReadPointInt64(model, point uint16) (int64, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadInt64(address + point)
+	val, err := r.AddressReader.ReadInt64(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -258,12 +259,12 @@ func (r *ModelReader) ReadPointInt64(model, point uint16) (int64, error) {
 }
 
 func (r *ModelReader) ReadPointFloat32(model, point uint16) (float32, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadFloat32(address + point)
+	val, err := r.AddressReader.ReadFloat32(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -276,12 +277,12 @@ func (r *ModelReader) ReadPointFloat32(model, point uint16) (float32, error) {
 }
 
 func (r *ModelReader) ReadPointFloat64(model, point uint16) (float64, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.Reader.ReadFloat64(address + point)
+	val, err := r.AddressReader.ReadFloat64(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -294,12 +295,12 @@ func (r *ModelReader) ReadPointFloat64(model, point uint16) (float64, error) {
 }
 
 func (r *ModelReader) ReadString(model, point, words uint16) (string, error) {
-	address, err := r.Converter.GetAddress(model)
+	address, err := r.ModelConverter.GetAddress(model)
 	if err != nil {
 		return "", err
 	}
 
-	val, err := r.Reader.ReadString(address+point, words)
+	val, err := r.AddressReader.ReadString(address+point, words)
 	if err != nil {
 		return "", err
 	}

@@ -24,7 +24,7 @@ func TestCachedModelScanner_GetAddress(t *testing.T) {
 	}
 
 	s := &dummyModelScanner{models: dummyData}
-	modelScanner := sunspec.CachedModelConverter{Scanner: s}
+	modelScanner := sunspec.CachedModelConverter{ModelScanner: s}
 
 	for m, ax := range dummyData {
 		a, err := modelScanner.GetAddress(m)
@@ -47,7 +47,7 @@ func TestCachedModelScanner_HasModel(t *testing.T) {
 		100: 101,
 		105: 108,
 	}}
-	modelScanner := sunspec.CachedModelConverter{Scanner: s}
+	modelScanner := sunspec.CachedModelConverter{ModelScanner: s}
 
 	tests := []struct {
 		model  uint16
@@ -174,7 +174,7 @@ func TestAddressModelScanner_Scan(t *testing.T) {
 		40185: math.MaxUint16,
 	}
 
-	scanner := &sunspec.AddressModelScanner{Reader: &dummyAddressReader{uints: registers}}
+	scanner := &sunspec.AddressModelScanner{UIntReader: &dummyAddressReader{uints: registers}}
 
 	models, err := scanner.Scan()
 	if err != nil {
@@ -212,10 +212,10 @@ func (d *dummyModelConverter) HasModel(model uint16) (bool, error) {
 
 func TestModelReader_ReadPointUint(t *testing.T) {
 	m := &sunspec.ModelReader{
-		Reader: &dummyAddressReader{
+		AddressReader: &dummyAddressReader{
 			uints: map[uint16]uint64{2: 123},
 		},
-		Converter: &dummyModelConverter{
+		ModelConverter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
@@ -250,10 +250,10 @@ func TestModelReader_ReadPointUint(t *testing.T) {
 
 func TestModelReader_ReadPointInt(t *testing.T) {
 	m := &sunspec.ModelReader{
-		Reader: &dummyAddressReader{
+		AddressReader: &dummyAddressReader{
 			ints: map[uint16]int64{2: 123},
 		},
-		Converter: &dummyModelConverter{
+		ModelConverter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
@@ -288,10 +288,10 @@ func TestModelReader_ReadPointInt(t *testing.T) {
 
 func TestModelReader_ReadPointFloat(t *testing.T) {
 	m := &sunspec.ModelReader{
-		Reader: &dummyAddressReader{
+		AddressReader: &dummyAddressReader{
 			floats: map[uint16]float64{2: 123.123},
 		},
-		Converter: &dummyModelConverter{
+		ModelConverter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
@@ -317,10 +317,10 @@ func TestModelReader_ReadPointFloat(t *testing.T) {
 
 func TestModelReader_ReadString(t *testing.T) {
 	m := &sunspec.ModelReader{
-		Reader: &dummyAddressReader{
+		AddressReader: &dummyAddressReader{
 			strings: map[uint16]string{2: "hallo!"},
 		},
-		Converter: &dummyModelConverter{
+		ModelConverter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
