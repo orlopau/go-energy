@@ -1,4 +1,4 @@
-module github.com/orlopau/sma-inverter-reader
+module github.com/orlopau/go-energy
 
 go 1.15
 
