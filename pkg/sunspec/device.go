@@ -1,20 +1,34 @@
 package sunspec
 
 import (
+	"github.com/orlopau/go-energy/pkg/modbus"
 	"io"
 )
 
-type AddressReaderCloser interface {
+type addressReaderCloser interface {
 	AddressReader
 	io.Closer
 }
 
+// Device represents a SunSpec device connected via modbus.
 type Device struct {
 	io.Closer
 	ModelReader
 }
 
-func NewDevice(arc AddressReaderCloser) Device {
+// Connect connects to a SunSpec modbus TCP device.
+func Connect(slaveId byte, addr string) (Device, error) {
+	client, err := modbus.Connect(addr, slaveId)
+	if err != nil {
+		return Device{}, err
+	}
+
+	device := newDevice(client)
+	return device, nil
+}
+
+// newDevice creates a new device using an addressReaderCloser.
+func newDevice(arc addressReaderCloser) Device {
 	scanner := &AddressModelScanner{UIntReader: arc}
 	converter := &CachedModelConverter{
 		ModelScanner: scanner,
