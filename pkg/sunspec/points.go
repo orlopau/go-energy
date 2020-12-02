@@ -12,15 +12,15 @@ const (
 )
 
 var (
-	PointSoc         = Point{model: 802, point: 11, tProvider: func() interface{} { return uint16(0) }, unit: UnitPercentage}
-	PointPower1Phase = Point{model: 101, point: 14, tProvider: func() interface{} { return int16(0) }, scaled: true, unit: UnitWatts}
-	PointPower2Phase = Point{model: 102, point: 14, tProvider: func() interface{} { return int16(0) }, scaled: true, unit: UnitWatts}
-	PointPower3Phase = Point{model: 103, point: 14, tProvider: func() interface{} { return int16(0) }, scaled: true, unit: UnitWatts}
+	PointSoc         = Point{model: 802, point: 11, t: uint16(0), unit: UnitPercentage}
+	PointPower1Phase = Point{model: 101, point: 14, t: int16(0), scaled: true, unit: UnitWatts}
+	PointPower2Phase = Point{model: 102, point: 14, t: int16(0), scaled: true, unit: UnitWatts}
+	PointPower3Phase = Point{model: 103, point: 14, t: int16(0), scaled: true, unit: UnitWatts}
 )
 
 type Point struct {
 	point, model uint16
-	tProvider    func() interface{}
+	t            interface{}
 	scaled       bool
 	unit         string
 }
@@ -45,7 +45,10 @@ func (r *ModelReader) HasPoint(p Point) (bool, error) {
 
 // GetPoint reads a Point from a SunSpec reader.
 func (r *ModelReader) GetPoint(p Point) (float64, error) {
-	tmpVal := p.tProvider()
+	tmpVal := p.t
+
+	println(tmpVal)
+	println(p.t)
 
 	var val float64
 	var err error
