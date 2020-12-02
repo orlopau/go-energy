@@ -1,6 +1,8 @@
 package sunspec_test
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/orlopau/go-energy/pkg/sunspec"
 	"math"
@@ -82,8 +84,26 @@ type dummyAddressReader struct {
 	ints    map[uint16]int64
 }
 
+// ReadInto actually only reads from the uint64 slice.
 func (d *dummyAddressReader) ReadInto(address uint16, data interface{}) error {
-	panic("Not implemented!")
+	v, ok := d.uints[address]
+	if !ok {
+		return fmt.Errorf("couldn't retrieve uint for address %v", address)
+	}
+
+	buffer := bytes.NewBuffer(make([]byte, 0))
+	err := binary.Write(buffer, binary.BigEndian, v)
+	if err != nil {
+		return err
+	}
+
+	err = binary.Read(buffer, binary.BigEndian, data)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *dummyAddressReader) ReadString(address, words uint16) (string, error) {
@@ -332,5 +352,26 @@ func TestModelReader_ReadString(t *testing.T) {
 
 	if s != "hallo!" {
 		t.Fatalf("float32 values do not match")
+	}
+}
+
+func TestModelReader_ReadInto(t *testing.T) {
+	m := &sunspec.ModelReader{
+		Reader: &dummyAddressReader{
+			uints: map[uint16]uint64{2: 1337},
+		},
+		Converter: &dummyModelConverter{
+			models: map[uint16]uint16{1: 1},
+		},
+	}
+
+	var v uint64
+	err := m.ReadInto(1, 1, &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if 1337 != v {
+		t.Fatalf("want %v, got %v", 1337, v)
 	}
 }
