@@ -82,7 +82,7 @@ type dummyAddressReader struct {
 	ints    map[uint16]int64
 }
 
-func (d *dummyAddressReader) ReadRegisterInto(address, quantity uint16, data interface{}) error {
+func (d *dummyAddressReader) ReadInto(address uint16, data interface{}) error {
 	panic("Not implemented!")
 }
 
@@ -174,7 +174,7 @@ func TestAddressModelScanner_Scan(t *testing.T) {
 		40185: math.MaxUint16,
 	}
 
-	scanner := &sunspec.AddressModelScanner{UIntReader: &dummyAddressReader{uints: registers}}
+	scanner := &sunspec.AddressModelScanner{Reader: &dummyAddressReader{uints: registers}}
 
 	models, err := scanner.Scan()
 	if err != nil {
@@ -212,10 +212,10 @@ func (d *dummyModelConverter) HasModel(model uint16) (bool, error) {
 
 func TestModelReader_ReadPointUint(t *testing.T) {
 	m := &sunspec.ModelReader{
-		AddressReader: &dummyAddressReader{
+		Reader: &dummyAddressReader{
 			uints: map[uint16]uint64{2: 123},
 		},
-		ModelConverter: &dummyModelConverter{
+		Converter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
@@ -250,10 +250,10 @@ func TestModelReader_ReadPointUint(t *testing.T) {
 
 func TestModelReader_ReadPointInt(t *testing.T) {
 	m := &sunspec.ModelReader{
-		AddressReader: &dummyAddressReader{
+		Reader: &dummyAddressReader{
 			ints: map[uint16]int64{2: 123},
 		},
-		ModelConverter: &dummyModelConverter{
+		Converter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
@@ -288,10 +288,10 @@ func TestModelReader_ReadPointInt(t *testing.T) {
 
 func TestModelReader_ReadPointFloat(t *testing.T) {
 	m := &sunspec.ModelReader{
-		AddressReader: &dummyAddressReader{
+		Reader: &dummyAddressReader{
 			floats: map[uint16]float64{2: 123.123},
 		},
-		ModelConverter: &dummyModelConverter{
+		Converter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}
@@ -317,10 +317,10 @@ func TestModelReader_ReadPointFloat(t *testing.T) {
 
 func TestModelReader_ReadString(t *testing.T) {
 	m := &sunspec.ModelReader{
-		AddressReader: &dummyAddressReader{
+		Reader: &dummyAddressReader{
 			strings: map[uint16]string{2: "hallo!"},
 		},
-		ModelConverter: &dummyModelConverter{
+		Converter: &dummyModelConverter{
 			models: map[uint16]uint16{1: 1},
 		},
 	}

@@ -21,8 +21,8 @@ var (
 	}
 )
 
-// AddressReader is a interface wrapping methods for reading types from addresses.
-type AddressReader interface {
+// addressReader is a interface wrapping methods for reading types from addresses.
+type addressReader interface {
 	ReadUint16(address uint16) (uint16, error)
 	ReadUint32(address uint16) (uint32, error)
 	ReadUint64(address uint16) (uint64, error)
@@ -32,40 +32,41 @@ type AddressReader interface {
 	ReadFloat32(address uint16) (float32, error)
 	ReadFloat64(address uint16) (float64, error)
 	ReadString(address, words uint16) (string, error)
+	ReadInto(address uint16, v interface{}) error
 }
 
-type ModelConverter interface {
+type modelConverter interface {
 	GetAddress(model uint16) (uint16, error)
 	HasModel(model uint16) (bool, error)
 }
 
-type ModelScanner interface {
+type modelScanner interface {
 	Scan() (map[uint16]uint16, error)
 }
 
 // ModelReader provides functionality reading SunSpec models and points.
 type ModelReader struct {
-	AddressReader  AddressReader
-	ModelConverter ModelConverter
+	Reader    addressReader
+	Converter modelConverter
 }
 
-// CachedModelConverter implements ModelConverter by lazily scanning the SunSpec device and caching.
+// CachedModelConverter implements modelConverter by lazily scanning the SunSpec device and caching.
 //
 // The models are cached until Scan is executed again.
 type CachedModelConverter struct {
-	ModelScanner ModelScanner
+	ModelScanner modelScanner
 	models       map[uint16]uint16
 }
 
-// AddressModelScanner implements ModelScanner scanning the device using the SunSpec specification.
+// AddressModelScanner implements modelScanner scanning the device using the SunSpec specification.
 type AddressModelScanner struct {
-	UIntReader interface {
+	Reader interface {
 		ReadUint16(address uint16) (uint16, error)
 		ReadUint32(address uint16) (uint32, error)
 	}
 }
 
-// Scan scans the devices SunSpec models using the sunsBaseAddresses and stores them in the cache.
+// Scan scans the devices SunSpec models using the sunsBaseAddresses.
 //
 // The register specified by the offset must point to the SunSpec Common Model ID.
 // For further information, consult the documentation provided by https://sunspec.org/
@@ -73,7 +74,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	// scan all base addresses for SunSpec identifier
 	var offset uint16
 	for _, address := range sunsBaseAddresses {
-		val, err := s.UIntReader.ReadUint32(address)
+		val, err := s.Reader.ReadUint32(address)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't read base address: %w", err)
 		}
@@ -87,7 +88,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	models := make(map[uint16]uint16)
 
 	for {
-		modelID, err := s.UIntReader.ReadUint16(offset)
+		modelID, err := s.Reader.ReadUint16(offset)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +99,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 
 		models[modelID] = offset
 
-		l, err := s.UIntReader.ReadUint16(offset + 1)
+		l, err := s.Reader.ReadUint16(offset + 1)
 		if err != nil {
 			return nil, err
 		}
@@ -151,12 +152,12 @@ func (c *CachedModelConverter) HasModel(model uint16) (bool, error) {
 }
 
 func (r *ModelReader) ReadPointUint16(model, point uint16) (uint16, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadUint16(address + point)
+	val, err := r.Reader.ReadUint16(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -169,12 +170,12 @@ func (r *ModelReader) ReadPointUint16(model, point uint16) (uint16, error) {
 }
 
 func (r *ModelReader) ReadPointUint32(model, point uint16) (uint32, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadUint32(address + point)
+	val, err := r.Reader.ReadUint32(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -187,12 +188,12 @@ func (r *ModelReader) ReadPointUint32(model, point uint16) (uint32, error) {
 }
 
 func (r *ModelReader) ReadPointUint64(model, point uint16) (uint64, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadUint64(address + point)
+	val, err := r.Reader.ReadUint64(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -205,12 +206,12 @@ func (r *ModelReader) ReadPointUint64(model, point uint16) (uint64, error) {
 }
 
 func (r *ModelReader) ReadPointInt16(model, point uint16) (int16, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadInt16(address + point)
+	val, err := r.Reader.ReadInt16(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -223,12 +224,12 @@ func (r *ModelReader) ReadPointInt16(model, point uint16) (int16, error) {
 }
 
 func (r *ModelReader) ReadPointInt32(model, point uint16) (int32, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadInt32(address + point)
+	val, err := r.Reader.ReadInt32(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -241,12 +242,12 @@ func (r *ModelReader) ReadPointInt32(model, point uint16) (int32, error) {
 }
 
 func (r *ModelReader) ReadPointInt64(model, point uint16) (int64, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadInt64(address + point)
+	val, err := r.Reader.ReadInt64(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -259,12 +260,12 @@ func (r *ModelReader) ReadPointInt64(model, point uint16) (int64, error) {
 }
 
 func (r *ModelReader) ReadPointFloat32(model, point uint16) (float32, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadFloat32(address + point)
+	val, err := r.Reader.ReadFloat32(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -277,12 +278,12 @@ func (r *ModelReader) ReadPointFloat32(model, point uint16) (float32, error) {
 }
 
 func (r *ModelReader) ReadPointFloat64(model, point uint16) (float64, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return 0, err
 	}
 
-	val, err := r.AddressReader.ReadFloat64(address + point)
+	val, err := r.Reader.ReadFloat64(address + point)
 	if err != nil {
 		return 0, err
 	}
@@ -295,15 +296,24 @@ func (r *ModelReader) ReadPointFloat64(model, point uint16) (float64, error) {
 }
 
 func (r *ModelReader) ReadString(model, point, words uint16) (string, error) {
-	address, err := r.ModelConverter.GetAddress(model)
+	address, err := r.Converter.GetAddress(model)
 	if err != nil {
 		return "", err
 	}
 
-	val, err := r.AddressReader.ReadString(address+point, words)
+	val, err := r.Reader.ReadString(address+point, words)
 	if err != nil {
 		return "", err
 	}
 
 	return val, nil
+}
+
+func (r *ModelReader) ReadInto(model, point uint16, v interface{}) error {
+	address, err := r.Converter.GetAddress(model)
+	if err != nil {
+		return err
+	}
+
+	return r.Reader.ReadInto(address+point, v)
 }
