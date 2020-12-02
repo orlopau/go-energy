@@ -79,3 +79,10 @@ func TestConnect_Scan(t *testing.T) {
 		t.Fatalf("want %v, got %v", 1337, p)
 	}
 }
+
+func TestConnect_Err(t *testing.T) {
+	_, err := sunspec.Connect(1, "127.0.0.2:1234")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
