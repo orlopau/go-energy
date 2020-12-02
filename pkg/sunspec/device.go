@@ -13,10 +13,6 @@ type Device struct {
 	ModelReader
 }
 
-func (d *Device) HasModel(model uint16) (bool, error) {
-	return d.Converter.HasModel(model)
-}
-
 // Connect connects to a SunSpec modbus TCP device.
 func Connect(slaveId byte, addr string) (*Device, error) {
 	client, err := modbus.Connect(addr, slaveId)

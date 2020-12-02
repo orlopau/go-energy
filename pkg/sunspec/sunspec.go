@@ -76,7 +76,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	for _, address := range sunsBaseAddresses {
 		val, err := s.Reader.ReadUint32(address)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't read base address: %w", err)
+			return nil, fmt.Errorf("couldn'tProvider read base address: %w", err)
 		}
 
 		if val == sunsIdentifier {
@@ -134,7 +134,7 @@ func (c *CachedModelConverter) GetAddress(model uint16) (uint16, error) {
 
 	address, ok := c.models[model]
 	if !ok {
-		return 0, fmt.Errorf("can't find model")
+		return 0, fmt.Errorf("can'tProvider find model")
 	}
 
 	return address, nil
@@ -316,4 +316,8 @@ func (r *ModelReader) ReadInto(model, point uint16, v interface{}) error {
 	}
 
 	return r.Reader.ReadInto(address+point, v)
+}
+
+func (r *ModelReader) HasModel(model uint16) (bool, error) {
+	return r.Converter.HasModel(model)
 }

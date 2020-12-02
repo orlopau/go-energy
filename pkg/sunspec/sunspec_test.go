@@ -86,13 +86,23 @@ type dummyAddressReader struct {
 
 // ReadInto actually only reads from the uint64 slice.
 func (d *dummyAddressReader) ReadInto(address uint16, data interface{}) error {
-	v, ok := d.uints[address]
-	if !ok {
-		return fmt.Errorf("couldn't retrieve uint for address %v", address)
+	buffer := bytes.NewBuffer(make([]byte, 0))
+	var err error
+	switch data.(type) {
+	case *uint64:
+		err = binary.Write(buffer, binary.BigEndian, d.uints[address])
+	case *uint32:
+		err = binary.Write(buffer, binary.BigEndian, uint32(d.uints[address]))
+	case *uint16:
+		err = binary.Write(buffer, binary.BigEndian, uint16(d.uints[address]))
+	case *int64:
+		err = binary.Write(buffer, binary.BigEndian, d.ints[address])
+	case *int32:
+		err = binary.Write(buffer, binary.BigEndian, int32(d.ints[address]))
+	case *int16:
+		err = binary.Write(buffer, binary.BigEndian, int16(d.ints[address]))
 	}
 
-	buffer := bytes.NewBuffer(make([]byte, 0))
-	err := binary.Write(buffer, binary.BigEndian, v)
 	if err != nil {
 		return err
 	}
@@ -109,7 +119,7 @@ func (d *dummyAddressReader) ReadInto(address uint16, data interface{}) error {
 func (d *dummyAddressReader) ReadString(address, words uint16) (string, error) {
 	v, ok := d.strings[address]
 	if !ok {
-		return "", fmt.Errorf("couldn't retrieve string for address %v", address)
+		return "", fmt.Errorf("couldn'tProvider retrieve string for address %v", address)
 	}
 
 	return v, nil
@@ -118,7 +128,7 @@ func (d *dummyAddressReader) ReadString(address, words uint16) (string, error) {
 func (d dummyAddressReader) getInt(address uint16) (int64, error) {
 	v, ok := d.ints[address]
 	if !ok {
-		return 0, fmt.Errorf("couldn't retrieve float for address %v", address)
+		return 0, fmt.Errorf("couldn'tProvider retrieve float for address %v", address)
 	}
 
 	return v, nil
@@ -142,7 +152,7 @@ func (d *dummyAddressReader) ReadInt64(address uint16) (int64, error) {
 func (d dummyAddressReader) getFloat(address uint16) (float64, error) {
 	v, ok := d.floats[address]
 	if !ok {
-		return 0, fmt.Errorf("couldn't retrieve float for address %v", address)
+		return 0, fmt.Errorf("couldn'tProvider retrieve float for address %v", address)
 	}
 
 	return v, nil
@@ -161,7 +171,7 @@ func (d *dummyAddressReader) ReadFloat64(address uint16) (float64, error) {
 func (d dummyAddressReader) getUInt(address uint16) (uint64, error) {
 	v, ok := d.uints[address]
 	if !ok {
-		return 0, fmt.Errorf("couldn't retrieve uint for address %v", address)
+		return 0, fmt.Errorf("couldn'tProvider retrieve uint for address %v", address)
 	}
 
 	return v, nil
@@ -219,7 +229,7 @@ type dummyModelConverter struct {
 func (d *dummyModelConverter) GetAddress(model uint16) (uint16, error) {
 	v, ok := d.models[model]
 	if !ok {
-		return 0, fmt.Errorf("couldn't find model")
+		return 0, fmt.Errorf("couldn't find address for model %v", model)
 	}
 
 	return v, nil
@@ -373,5 +383,32 @@ func TestModelReader_ReadInto(t *testing.T) {
 
 	if 1337 != v {
 		t.Fatalf("want %v, got %v", 1337, v)
+	}
+}
+
+func TestModelReader_HasModel(t *testing.T) {
+	m := &sunspec.ModelReader{
+		Reader: &dummyAddressReader{},
+		Converter: &dummyModelConverter{
+			models: map[uint16]uint16{1: 1},
+		},
+	}
+
+	hasModel, err := m.HasModel(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !hasModel {
+		t.Fatalf("want true, got false")
+	}
+
+	hasModel, err = m.HasModel(111)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if hasModel {
+		t.Fatalf("want false, got true")
 	}
 }
