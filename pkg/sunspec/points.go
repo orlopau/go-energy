@@ -12,7 +12,7 @@ const (
 )
 
 var (
-	PointSoc         = Point{model: 802, point: 11, t: uint16(0), unit: UnitPercentage}
+	PointSoc         = Point{model: 124, point: 8, t: uint16(0), unit: UnitPercentage}
 	PointPower1Phase = Point{model: 101, point: 14, t: int16(0), scaled: true, unit: UnitWatts}
 	PointPower2Phase = Point{model: 102, point: 14, t: int16(0), scaled: true, unit: UnitWatts}
 	PointPower3Phase = Point{model: 103, point: 14, t: int16(0), scaled: true, unit: UnitWatts}
@@ -46,9 +46,6 @@ func (r *ModelReader) HasPoint(p Point) (bool, error) {
 // GetPoint reads a Point from a SunSpec reader.
 func (r *ModelReader) GetPoint(p Point) (float64, error) {
 	tmpVal := p.t
-
-	println(tmpVal)
-	println(p.t)
 
 	var val float64
 	var err error
@@ -90,4 +87,15 @@ func (r *ModelReader) GetPoint(p Point) (float64, error) {
 	}
 
 	return val * math.Pow10(int(factor)), nil
+}
+
+func (r *ModelReader) GetAnyPoint(ps ...Point) (float64, error) {
+	for _, v := range ps {
+		p, err := r.GetPoint(v)
+		if err == nil {
+			return p, nil
+		}
+	}
+
+	return 0, fmt.Errorf("did not find any of these points %v", ps)
 }
