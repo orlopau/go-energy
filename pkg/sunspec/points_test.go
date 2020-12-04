@@ -5,17 +5,19 @@ import (
 	"testing"
 )
 
+var testPoint = sunspec.Point{Point: 11, Model: 802, T: uint16(0)}
+
 func TestModelReader_HasPoint(t *testing.T) {
 	m := &sunspec.ModelReader{
 		Reader: &dummyAddressReader{
-			uints: map[uint16]uint64{1: 55},
+			uints: map[uint16]uint64{12: 55},
 		},
 		Converter: &dummyModelConverter{
 			models: map[uint16]uint16{802: 1},
 		},
 	}
 
-	hasPoint, err := m.HasPoint(sunspec.PointSoc)
+	hasPoint, err := m.HasPoint(testPoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,6 +49,8 @@ func TestModelReader_HasPoint_NotImplemented(t *testing.T) {
 	}
 }
 
+var testPoint2 = sunspec.Point{Model: 101, Point: 14, T: int16(0), Scaled: true, Unit: sunspec.UnitWatts}
+
 func TestModelReader_GetPoint(t *testing.T) {
 	const soc = 55
 	const pow = 20
@@ -63,7 +67,8 @@ func TestModelReader_GetPoint(t *testing.T) {
 		},
 	}
 
-	s, err := m.GetPoint(sunspec.PointSoc)
+	// test unscaled
+	s, err := m.GetPoint(testPoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +77,8 @@ func TestModelReader_GetPoint(t *testing.T) {
 		t.Fatalf("want %v, got %v", soc, s)
 	}
 
-	p, err := m.GetPoint(sunspec.PointPower1Phase)
+	// test scaled
+	p, err := m.GetPoint(testPoint2)
 	if err != nil {
 		t.Fatal(err)
 	}
