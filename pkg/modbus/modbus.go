@@ -41,7 +41,7 @@ func (c *Client) ReadInto(address uint16, v interface{}) error {
 		return err
 	}
 	buf := bytes.NewReader(registers)
-	err = binary.Read(buf, binary.BigEndian, &v)
+	err = binary.Read(buf, binary.BigEndian, v)
 	if err != nil {
 		return err
 	}
