@@ -79,7 +79,7 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	for _, address := range sunsBaseAddresses {
 		val, err := s.Reader.ReadUint32(address)
 		if err != nil {
-			return nil, fmt.Errorf("couldn'tProvider read base address: %w", err)
+			return nil, fmt.Errorf("couldn't read base address: %w", err)
 		}
 
 		if val == sunsIdentifier {
