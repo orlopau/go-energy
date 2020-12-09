@@ -58,7 +58,7 @@ func TestEnergyMeter_Read(t *testing.T) {
 	}
 
 	emConn := &dummyEnergyMeterConnection{msg}
-	em := &energyMeter{emConn}
+	em := &EnergyMeter{emConn}
 
 	telegram, err := em.ReadTelegram()
 	if err != nil {

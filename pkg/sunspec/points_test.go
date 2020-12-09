@@ -17,7 +17,7 @@ func TestModelReader_HasPoint(t *testing.T) {
 		},
 	}
 
-	hasPoint, err := m.HasPoint(testPoint)
+	hasPoint, _, err := m.HasAnyPoint(testPoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,14 +32,13 @@ func TestModelReader_HasPoint_NotImplemented(t *testing.T) {
 	// TODO implement "not implemented" detection
 
 	m := &sunspec.ModelReader{
-		Reader: &dummyAddressReader{
-		},
+		Reader: &dummyAddressReader{},
 		Converter: &dummyModelConverter{
 			models: map[uint16]uint16{802: 1},
 		},
 	}
 
-	hasPoint, err := m.HasPoint(sunspec.PointSoc)
+	hasPoint, _, err := m.HasAnyPoint(sunspec.PointSoc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +67,7 @@ func TestModelReader_GetPoint(t *testing.T) {
 	}
 
 	// test unscaled
-	s, err := m.GetPoint(testPoint)
+	s, err := m.GetAnyPoint(testPoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +77,7 @@ func TestModelReader_GetPoint(t *testing.T) {
 	}
 
 	// test scaled
-	p, err := m.GetPoint(testPoint2)
+	p, err := m.GetAnyPoint(testPoint2)
 	if err != nil {
 		t.Fatal(err)
 	}

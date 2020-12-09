@@ -29,8 +29,8 @@ func (p Point) String() string {
 	return fmt.Sprintf("Point{point:%v,model:%v,scaled:%v,unit:%v}", p.Point, p.Model, p.Scaled, p.Unit)
 }
 
-// HasPoint returns true if the reader has the model of the specified Point.
-func (r *ModelReader) HasPoint(p Point) (bool, error) {
+// hasPoint returns true if the reader has the model of the specified Point.
+func (r *ModelReader) hasPoint(p Point) (bool, error) {
 	hasModel, err := r.Converter.HasModel(p.Model)
 	if err != nil {
 		return false, err
@@ -43,8 +43,27 @@ func (r *ModelReader) HasPoint(p Point) (bool, error) {
 	return true, nil
 }
 
-// GetPoint reads a Point from a SunSpec reader.
-func (r *ModelReader) GetPoint(p Point) (float64, error) {
+// HasAnyPoint checks if any of the specified Points is present on the device.
+//
+// If a point is present, it returns that point.
+//
+// If no point is present, it returns false.
+func (r *ModelReader) HasAnyPoint(ps ...Point) (bool, Point, error) {
+	for _, v := range ps {
+		has, err := r.hasPoint(v)
+		if err != nil {
+			return false, Point{}, err
+		}
+		if has {
+			return true, v, nil
+		}
+	}
+
+	return false, Point{}, nil
+}
+
+// getPoint reads a Point from a SunSpec reader.
+func (r *ModelReader) getPoint(p Point) (float64, error) {
 	tmpVal := p.T
 
 	var val float64
@@ -91,7 +110,7 @@ func (r *ModelReader) GetPoint(p Point) (float64, error) {
 
 func (r *ModelReader) GetAnyPoint(ps ...Point) (float64, error) {
 	for _, v := range ps {
-		p, err := r.GetPoint(v)
+		p, err := r.getPoint(v)
 		if err == nil {
 			return p, nil
 		}

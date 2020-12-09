@@ -8,13 +8,8 @@ type addressReaderCloser interface {
 	addressReader
 }
 
-// Device represents a SunSpec device connected via modbus.
-type Device struct {
-	ModelReader
-}
-
 // Connect connects to a SunSpec modbus TCP device.
-func Connect(slaveId byte, addr string) (*Device, error) {
+func Connect(slaveId byte, addr string) (*ModelReader, error) {
 	client, err := modbus.Connect(addr, slaveId)
 	if err != nil {
 		return nil, err
@@ -25,7 +20,7 @@ func Connect(slaveId byte, addr string) (*Device, error) {
 }
 
 // newDevice creates a new device using an addressReaderCloser.
-func newDevice(arc addressReaderCloser) *Device {
+func newDevice(arc addressReaderCloser) *ModelReader {
 	scanner := &AddressModelScanner{Reader: arc}
 	converter := &CachedModelConverter{
 		ModelScanner: scanner,
@@ -36,9 +31,5 @@ func newDevice(arc addressReaderCloser) *Device {
 		Converter: converter,
 	}
 
-	d := &Device{
-		ModelReader: m,
-	}
-
-	return d
+	return &m
 }
