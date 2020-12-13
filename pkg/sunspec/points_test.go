@@ -2,6 +2,7 @@ package sunspec_test
 
 import (
 	"github.com/orlopau/go-energy/pkg/sunspec"
+	"math"
 	"testing"
 )
 
@@ -28,13 +29,10 @@ func TestModelReader_HasPoint(t *testing.T) {
 }
 
 func TestModelReader_HasPoint_NotImplemented(t *testing.T) {
-	t.Skipf("Skipped because not implemented detections is not yet implemented!")
-	// TODO implement "not implemented" detection
-
 	m := &sunspec.ModelReader{
 		Reader: &dummyAddressReader{},
 		Converter: &dummyModelConverter{
-			models: map[uint16]uint16{802: 1},
+			models: map[uint16]uint16{802: math.MaxUint16},
 		},
 	}
 

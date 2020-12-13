@@ -3,12 +3,25 @@ package sunspec
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/pkg/errors"
 	"math"
 )
 
 const (
 	UnitWatts      = "W"
 	UnitPercentage = "%"
+)
+
+var (
+	ErrPointNotImplemented = errors.New("point is not implemented")
+)
+
+const (
+	// float values are not implemented if they are NaN
+	notImplInt16  = math.MaxInt16 + 1
+	notImplUint16 = math.MaxUint16
+	notImplInt32  = math.MaxInt32 + 1
+	notImplUint32 = math.MaxUint32
 )
 
 var (
@@ -71,21 +84,39 @@ func (r *ModelReader) getPoint(p Point) (float64, error) {
 	switch i := tmpVal.(type) {
 	case float64:
 		err = r.ReadInto(p.Model, p.Point, &i)
+		if math.IsNaN(val) {
+			return 0, ErrPointNotImplemented
+		}
 		val = i
 	case float32:
 		err = r.ReadInto(p.Model, p.Point, &i)
+		if math.IsNaN(val) {
+			return 0, ErrPointNotImplemented
+		}
 		val = float64(i)
 	case uint16:
 		err = r.ReadInto(p.Model, p.Point, &i)
+		if val == float64(notImplUint16) {
+			return 0, ErrPointNotImplemented
+		}
 		val = float64(i)
 	case uint32:
 		err = r.ReadInto(p.Model, p.Point, &i)
+		if val == float64(notImplUint32) {
+			return 0, ErrPointNotImplemented
+		}
 		val = float64(i)
 	case int16:
 		err = r.ReadInto(p.Model, p.Point, &i)
+		if val == float64(notImplInt16) {
+			return 0, ErrPointNotImplemented
+		}
 		val = float64(i)
 	case int32:
 		err = r.ReadInto(p.Model, p.Point, &i)
+		if val == float64(notImplInt32) {
+			return 0, ErrPointNotImplemented
+		}
 		val = float64(i)
 	}
 

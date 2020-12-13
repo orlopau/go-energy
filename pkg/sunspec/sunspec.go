@@ -1,7 +1,6 @@
 package sunspec
 
 import (
-	"errors"
 	"fmt"
 	"math"
 )
@@ -11,8 +10,6 @@ const (
 	// if the device is SunSpec compatible.
 	sunsIdentifier uint32 = 0x53756e53
 )
-
-var ErrNotImplemented = errors.New("not implemented")
 
 var (
 	// sunsBaseAddresses contain the base modbus registers where the sunsIdentifier must be present
@@ -137,7 +134,7 @@ func (c *CachedModelConverter) GetAddress(model uint16) (uint16, error) {
 
 	address, ok := c.models[model]
 	if !ok {
-		return 0, ErrNotImplemented
+		return 0, ErrPointNotImplemented
 	}
 
 	return address, nil
