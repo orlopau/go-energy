@@ -4,26 +4,31 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/goburrow/modbus"
-	"io"
+	"github.com/pkg/errors"
+	"log"
+	"os"
 	"time"
 )
+
+const backoffDuration = 10 * time.Second
 
 type registerReader interface {
 	ReadHoldingRegisters(address uint16, quantity uint16) (results []byte, err error)
 }
 
 type Client struct {
-	handler io.Closer
+	handler *modbus.TCPClientHandler
 	client  registerReader
 }
 
 func Connect(addr string, slaveId byte) (*Client, error) {
 	handler := modbus.NewTCPClientHandler(addr)
 	handler.Timeout = 20 * time.Second
+	handler.IdleTimeout = 24 * time.Hour
 	handler.SlaveId = slaveId
-	err := handler.Connect()
+	err := reconnect(handler)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "connecting to modbus")
 	}
 
 	return &Client{handler: handler, client: modbus.NewClient(handler)}, nil
@@ -36,31 +41,50 @@ func (c *Client) Close() error {
 func (c *Client) ReadInto(address uint16, v interface{}) error {
 	b := binary.Size(v)
 
-	registers, err := c.client.ReadHoldingRegisters(address, uint16(b))
-	if err != nil {
-		return err
-	}
-	buf := bytes.NewReader(registers)
-	err = binary.Read(buf, binary.BigEndian, v)
+	return c.readBytesInto(address, uint16(b), v)
+}
+
+func reconnect(handler *modbus.TCPClientHandler) error {
+	err := handler.Close()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	for {
+		log.Printf("connecting to %v...", handler.Address)
+		err := handler.Connect()
+		if err == nil {
+			log.Printf("connected to %v", handler.Address)
+			return nil
+		}
+
+		log.Println(errors.Wrap(err, "couldn't connect to device").Error())
+		<-time.After(backoffDuration)
+	}
 }
 
 func (c *Client) readBytesInto(address, quantity uint16, data interface{}) error {
-	registers, err := c.client.ReadHoldingRegisters(address, quantity)
-	if err != nil {
-		return err
-	}
-	buf := bytes.NewReader(registers)
-	err = binary.Read(buf, binary.BigEndian, data)
-	if err != nil {
-		return err
-	}
+	for {
+		registers, err := c.client.ReadHoldingRegisters(address, quantity)
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			err := reconnect(c.handler)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
 
-	return nil
+		buf := bytes.NewReader(registers)
+		err = binary.Read(buf, binary.BigEndian, data)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 }
 
 func (c *Client) ReadUint16(address uint16) (uint16, error) {
