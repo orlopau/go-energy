@@ -2,6 +2,7 @@ package modbus
 
 import (
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"net"
@@ -9,9 +10,10 @@ import (
 )
 
 const (
-	backoffBase             = time.Second
-	backoffMax              = time.Minute * 2
-	backoffRandomMultiplier = time.Second
+	backoffStart            = 500 * time.Millisecond
+	backoffExpoBase         = 1.2
+	backoffMax              = 30 * time.Second
+	backoffRandomMultiplier = 100 * time.Millisecond
 	timeout                 = time.Minute
 )
 
@@ -57,7 +59,6 @@ func isConnAlive(c *net.TCPConn) bool {
 		}
 	}()
 
-
 	b := make([]byte, 1)
 	if _, err := c.Read(b); err == io.EOF {
 		return false
@@ -74,13 +75,12 @@ func (c *reconnectingConn) reconnect() error {
 		}
 	}
 
-	var backoff int64
 	var i int
 
 	for {
 		conn, err := net.DialTimeout("tcp", c.addr, timeout)
-		tcpConn := conn.(*net.TCPConn)
 		if err == nil {
+			tcpConn := conn.(*net.TCPConn)
 			err := tcpConn.SetKeepAlive(true)
 			if err != nil {
 				return err
@@ -94,12 +94,15 @@ func (c *reconnectingConn) reconnect() error {
 			return nil
 		}
 
-		if backoff <= backoffMax.Milliseconds() {
-			randomOffset := rand.Float64() * float64(backoffRandomMultiplier.Milliseconds())
-			newBackoff := math.Pow(float64(backoffBase.Milliseconds()), float64(i)) + randomOffset
-			backoff = int64(math.Max(newBackoff, float64(backoffMax.Milliseconds())))
+		randomOffset := rand.Float64() * float64(backoffRandomMultiplier.Milliseconds())
+		backoff := math.Pow(backoffExpoBase, float64(i))*float64(backoffStart.Milliseconds()) + randomOffset
+		if backoff < float64(backoffMax.Milliseconds()) {
 			i++
+		} else {
+			backoff = float64(backoffMax.Milliseconds())
 		}
+
+		log.Printf("backing off %v millis...", backoff)
 
 		select {
 		case <-c.cancel:

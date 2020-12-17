@@ -7,17 +7,20 @@ import (
 	"go.uber.org/goleak"
 	"io"
 	"net"
+	"sync"
 	"testing"
 )
 
-func newTcpServer() (*net.TCPListener, error) {
+func getFreeAddr() string {
 	port, err := freeport.GetFreePort()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	addr := fmt.Sprintf(":%v", port)
+	return fmt.Sprintf(":%v", port)
+}
 
+func newTcpServer(addr string) (*net.TCPListener, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -77,8 +80,10 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
-func TestReconnectingConn_Read(t *testing.T) {
-	server, err := newTcpServer()
+func TestReconnectingConn_Ping(t *testing.T) {
+	addr := getFreeAddr()
+
+	server, err := newTcpServer(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,6 +102,46 @@ func TestReconnectingConn_Read(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	err = conn.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReconnectingConn_ReconnectInitial(t *testing.T) {
+	addr := getFreeAddr()
+
+	conn, err := newReconnectingConn(addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wgPing sync.WaitGroup
+	var wgServerStart sync.WaitGroup
+	wgPing.Add(1)
+	wgServerStart.Add(1)
+	go func() {
+		wgServerStart.Done()
+		err = verifyPing(conn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wgPing.Done()
+	}()
+
+	wgServerStart.Wait()
+	server, err := newTcpServer(addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := server.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	wgPing.Wait()
 
 	err = conn.Close()
 	if err != nil {
