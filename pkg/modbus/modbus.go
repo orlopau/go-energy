@@ -21,11 +21,10 @@ type Client struct {
 	client  registerReader
 }
 
-func Connect(addr string, slaveId byte) (*Client, error) {
+func Connect(addr string) (*Client, error) {
 	handler := modbus.NewTCPClientHandler(addr)
 	handler.Timeout = 20 * time.Second
 	handler.IdleTimeout = 24 * time.Hour
-	handler.SlaveId = slaveId
 	err := reconnect(handler)
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to modbus")
@@ -36,6 +35,10 @@ func Connect(addr string, slaveId byte) (*Client, error) {
 
 func (c *Client) Close() error {
 	return c.handler.Close()
+}
+
+func (c *Client) SetSlaveID(id byte) {
+	c.handler.SlaveId = id
 }
 
 func (c *Client) ReadInto(address uint16, v interface{}) error {

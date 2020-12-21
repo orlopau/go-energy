@@ -18,17 +18,18 @@ var (
 
 const (
 	// float values are not implemented if they are NaN
-	notImplInt16  = math.MaxInt16 + 1
+	notImplInt16  = math.MinInt16
 	notImplUint16 = math.MaxUint16
-	notImplInt32  = math.MaxInt32 + 1
+	notImplInt32  = math.MinInt32
 	notImplUint32 = math.MaxUint32
 )
 
 var (
-	PointSoc         = Point{Model: 124, Point: 8, T: uint16(0), Unit: UnitPercentage}
-	PointPower1Phase = Point{Model: 101, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
-	PointPower2Phase = Point{Model: 102, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
-	PointPower3Phase = Point{Model: 103, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
+	PointSoc           = Point{Model: 124, Point: 8, T: uint16(0), Unit: UnitPercentage}
+	PointDeviceAddress = Point{Model: 1, Point: 66, T: uint16(0)}
+	PointPower1Phase   = Point{Model: 101, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
+	PointPower2Phase   = Point{Model: 102, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
+	PointPower3Phase   = Point{Model: 103, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
 )
 
 type Point struct {
@@ -81,43 +82,43 @@ func (r *ModelReader) getPoint(p Point) (float64, error) {
 
 	var val float64
 	var err error
-	switch i := tmpVal.(type) {
+	switch raw := tmpVal.(type) {
 	case float64:
-		err = r.ReadInto(p.Model, p.Point, &i)
-		if math.IsNaN(val) {
+		err = r.ReadInto(p.Model, p.Point, &raw)
+		if math.IsNaN(raw) {
 			return 0, ErrPointNotImplemented
 		}
-		val = i
+		val = raw
 	case float32:
-		err = r.ReadInto(p.Model, p.Point, &i)
-		if math.IsNaN(val) {
+		err = r.ReadInto(p.Model, p.Point, &raw)
+		if math.IsNaN(float64(raw)) {
 			return 0, ErrPointNotImplemented
 		}
-		val = float64(i)
+		val = float64(raw)
 	case uint16:
-		err = r.ReadInto(p.Model, p.Point, &i)
-		if val == float64(notImplUint16) {
+		err = r.ReadInto(p.Model, p.Point, &raw)
+		if raw == notImplUint16 {
 			return 0, ErrPointNotImplemented
 		}
-		val = float64(i)
+		val = float64(raw)
 	case uint32:
-		err = r.ReadInto(p.Model, p.Point, &i)
-		if val == float64(notImplUint32) {
+		err = r.ReadInto(p.Model, p.Point, &raw)
+		if raw == notImplUint32 {
 			return 0, ErrPointNotImplemented
 		}
-		val = float64(i)
+		val = float64(raw)
 	case int16:
-		err = r.ReadInto(p.Model, p.Point, &i)
-		if val == float64(notImplInt16) {
+		err = r.ReadInto(p.Model, p.Point, &raw)
+		if raw == notImplInt16 {
 			return 0, ErrPointNotImplemented
 		}
-		val = float64(i)
+		val = float64(raw)
 	case int32:
-		err = r.ReadInto(p.Model, p.Point, &i)
-		if val == float64(notImplInt32) {
+		err = r.ReadInto(p.Model, p.Point, &raw)
+		if val == notImplInt32 {
 			return 0, ErrPointNotImplemented
 		}
-		val = float64(i)
+		val = float64(raw)
 	}
 
 	if err != nil {
@@ -144,6 +145,9 @@ func (r *ModelReader) GetAnyPoint(ps ...Point) (float64, error) {
 		p, err := r.getPoint(v)
 		if err == nil {
 			return p, nil
+		}
+		if !errors.Is(err, ErrPointNotImplemented) {
+			return 0, err
 		}
 	}
 

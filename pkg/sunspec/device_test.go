@@ -52,7 +52,7 @@ func TestConnect_Scan(t *testing.T) {
 
 	setupRegisters(server.HoldingRegisters)
 
-	ss, err := sunspec.Connect(1, addr)
+	ss, err := sunspec.Connect(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
