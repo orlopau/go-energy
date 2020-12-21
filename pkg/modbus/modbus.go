@@ -160,9 +160,10 @@ func (c *Client) ReadFloat64(address uint16) (float64, error) {
 }
 
 func (c *Client) ReadString(address, words uint16) (string, error) {
-	registers, err := c.client.ReadHoldingRegisters(address, words)
+	var val string
+	err := c.readBytesInto(address, words, val)
 	if err != nil {
 		return "", err
 	}
-	return string(registers), nil
+	return val, nil
 }

@@ -147,5 +147,5 @@ func (r *ModelReader) GetAnyPoint(ps ...Point) (float64, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("did not find any of these points %v", ps)
+	return 0, errors.Wrap(ErrPointNotImplemented, fmt.Sprintf("did not find any of these points %v", ps))
 }
