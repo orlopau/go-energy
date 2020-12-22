@@ -32,9 +32,12 @@ var (
 	PointPower3Phase   = Point{Model: 103, Point: 14, T: int16(0), Scaled: true, Unit: UnitWatts}
 )
 
+// Point represents a SunSpec point.
 type Point struct {
 	Point, Model uint16
+	// T is the type of the point.
 	T            interface{}
+	// Scaled must be set to true if the value is a scaled value with an additional register for scaling.
 	Scaled       bool
 	Unit         string
 }
@@ -140,6 +143,9 @@ func (r *ModelReader) getPoint(p Point) (float64, error) {
 	return val * math.Pow10(int(factor)), nil
 }
 
+// GetAnyPoint fetches the first available point and returns its value.
+//
+// Returns an error if none point of the given points is found.
 func (r *ModelReader) GetAnyPoint(ps ...Point) (float64, error) {
 	for _, v := range ps {
 		p, err := r.getPoint(v)

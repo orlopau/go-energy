@@ -1,3 +1,4 @@
+// Provides helpers for interacting with modbus devices.
 package modbus
 
 import (
@@ -16,11 +17,15 @@ type registerReader interface {
 	ReadHoldingRegisters(address uint16, quantity uint16) (results []byte, err error)
 }
 
+// Client represents a modbus connection.
+//
+// When the connection is unresponsive, the client will attempt to reconnect.
 type Client struct {
 	handler *modbus.TCPClientHandler
 	client  registerReader
 }
 
+// Connect connects to the given address using modbus tcp.
 func Connect(addr string) (*Client, error) {
 	handler := modbus.NewTCPClientHandler(addr)
 	handler.Timeout = 20 * time.Second
@@ -37,10 +42,12 @@ func (c *Client) Close() error {
 	return c.handler.Close()
 }
 
+// SetSlaveID sets the slave id (device address) of following modbus requests.
 func (c *Client) SetSlaveID(id byte) {
 	c.handler.SlaveId = id
 }
 
+// ReadInto reads the specified holding register into the given variable.
 func (c *Client) ReadInto(address uint16, v interface{}) error {
 	b := binary.Size(v)
 

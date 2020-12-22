@@ -1,3 +1,4 @@
+// Provides functionality for reading and decoding SMA energymeter data packets.
 package meter
 
 import (
@@ -21,7 +22,7 @@ type EnergyMeter struct {
 
 // Listen opens a multicast socket to listen for energymeter messages.
 //
-// Messages can be read using ReadTelegram.
+// Returns an EnergyMeter representing the opened connection.
 func Listen() (*EnergyMeter, error) {
 	addr, err := net.ResolveUDPAddr("udp", multicastIP)
 	if err != nil {
@@ -36,6 +37,7 @@ func Listen() (*EnergyMeter, error) {
 	return &EnergyMeter{Conn: l}, nil
 }
 
+// Close closes the opened connection.
 func (t *EnergyMeter) Close() error {
 	if t.Conn == nil {
 		return fmt.Errorf("no connection to close")

@@ -12,6 +12,7 @@ type ModbusDevice struct {
 
 // Connect connects to a SunSpec modbus TCP device.
 func Connect(addr string) (*ModbusDevice, error) {
+	// TODO remove modbus library dependency in sunspec package
 	client, err := modbus.Connect(addr)
 	if err != nil {
 		return nil, err
@@ -36,6 +37,9 @@ func newDevice(client *modbus.Client) *ModbusDevice {
 	return &ModbusDevice{ModelReader: m, client: client}
 }
 
+// AutoSetDeviceAddress tries to infer the device address (slave id) from the SunSpec model.
+//
+// Returns an error if the point is not present in the SunSpec model.
 func (d *ModbusDevice) AutoSetDeviceAddress() error {
 	d.SetDeviceAddress(126)
 
@@ -48,6 +52,7 @@ func (d *ModbusDevice) AutoSetDeviceAddress() error {
 	return nil
 }
 
+// SetDeviceAddress sets the device address (slave id) for following modbus requests.
 func (d *ModbusDevice) SetDeviceAddress(deviceAddr byte) {
 	d.client.SetSlaveID(deviceAddr)
 }

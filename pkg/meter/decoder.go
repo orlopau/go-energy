@@ -16,14 +16,17 @@ const (
 	channelOther        uint8  = 144
 )
 
+// OBISIdentifier represents an identifier following the OBIS standard.
 type OBISIdentifier struct {
 	Channel, MeasVal, MeasType, Tariff uint8
 }
 
+// SoftwareVersion represents a software version of an Energy Meter.
 type SoftwareVersion struct {
 	Major, Minor, Build, Revision uint8
 }
 
+// EnergyMeterTelegram represents a decoded telegram.
 type EnergyMeterTelegram struct {
 	SusyID          uint16
 	SerialNo        uint32
@@ -32,6 +35,7 @@ type EnergyMeterTelegram struct {
 	SoftwareVersion SoftwareVersion
 }
 
+// DecodeTelegram decodes the given energy meter compatible telegram into an EnergyMeterTelegram.
 func DecodeTelegram(data []byte) (*EnergyMeterTelegram, error) {
 	startIndex := bytes.Index(data, []byte(startIdentifier))
 	if startIndex == -1 {

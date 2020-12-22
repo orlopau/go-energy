@@ -1,3 +1,4 @@
+// Provides functions for interacting with SunSpec compatible devices.
 package sunspec
 
 import (

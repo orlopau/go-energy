@@ -1,3 +1,4 @@
+// Provides SMA device discovery functionality.
 package discovery
 
 import (
