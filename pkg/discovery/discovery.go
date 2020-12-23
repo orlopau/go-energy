@@ -5,26 +5,28 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"golang.org/x/net/ipv4"
 	"net"
 	"os"
 	"time"
 )
 
 const (
-	multicastAddress       = "239.12.255.254:9522"
 	discoveryPayload       = "534d4100000402a0ffffffff0000002000000000"
 	discoveryVerifyPayload = "534d4100000402A000000001000200000001"
 )
 
+var multicastAddress = &net.UDPAddr{IP: net.IPv4(239, 12, 255, 254), Port: 9522}
+
 // send sends the discovery payload message to the specified udp connection.
-func send(conn net.PacketConn, addr net.Addr) error {
+func send(conn net.PacketConn) error {
 	// send multicast for discovery
 	p, err := hex.DecodeString(discoveryPayload)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.WriteTo(p, addr)
+	_, err = conn.WriteTo(p, multicastAddress)
 	return err
 }
 
@@ -59,7 +61,7 @@ func listen(conn net.PacketConn, timeout time.Duration) ([]net.Addr, error) {
 			}
 		}
 
-		if bytes.Compare(buf[0:n], verifyPayload) == 0 && !contains {
+		if !contains && bytes.Compare(buf[0:n], verifyPayload) == 0 {
 			results = append(results, addr)
 		}
 	}
@@ -70,18 +72,20 @@ func listen(conn net.PacketConn, timeout time.Duration) ([]net.Addr, error) {
 // DiscoverInverters discovers inverters connected to the network at the specified interface.
 //
 // The function sends a multicast discover request and waits the specified duration for responses.
+// Returns the addresses of responding devices.
 func DiscoverInverters(ifi *net.Interface, timeout time.Duration) ([]net.Addr, error) {
-	addr, err := net.ResolveUDPAddr("udp", multicastAddress)
+	conn, err := net.ListenUDP("udp4", multicastAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := net.ListenMulticastUDP("udp", ifi, addr)
+	pconn := ipv4.NewPacketConn(conn)
+	err = pconn.JoinGroup(ifi, multicastAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := send(conn, addr); err != nil {
+	if err := send(conn); err != nil {
 		return nil, err
 	}
 

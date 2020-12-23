@@ -216,3 +216,34 @@ func TestListen_No_Duplicates(t *testing.T) {
 		t.Fatalf("incorrect address, expected %s got %s", testData[1].addr, addrs[0])
 	}
 }
+
+func TestDiscoverInverters(t *testing.T) {
+	go func() {
+		// send on loopback
+		verifyPayload, err := hex.DecodeString(discoveryVerifyPayload)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		conn, err := net.Dial("udp4", "239.12.255.254:9522")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = conn.Write(verifyPayload)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	addrs, err := DiscoverInverters(nil, 1*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(addrs)
+
+	if len(addrs) != 1 {
+		t.Fatal("no addresses found")
+	}
+}
