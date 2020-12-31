@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"log"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -76,7 +77,7 @@ func reconnect(handler *modbus.TCPClientHandler) error {
 func (c *Client) readBytesInto(address, quantity uint16, data interface{}) error {
 	for {
 		registers, err := c.client.ReadHoldingRegisters(address, quantity)
-		if errors.Is(err, os.ErrDeadlineExceeded) {
+		if errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, syscall.EPIPE) {
 			err := reconnect(c.handler)
 			if err != nil {
 				return err
