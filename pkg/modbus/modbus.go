@@ -6,13 +6,19 @@ import (
 	"encoding/binary"
 	"github.com/goburrow/modbus"
 	"github.com/pkg/errors"
+	"io"
 	"log"
+	"math"
 	"os"
 	"syscall"
 	"time"
 )
 
-const backoffDuration = 10 * time.Second
+const (
+	bo     = 1 * time.Second
+	boMax  = 10 * time.Second
+	boBase = 1.7
+)
 
 type registerReader interface {
 	ReadHoldingRegisters(address uint16, quantity uint16) (results []byte, err error)
@@ -52,7 +58,7 @@ func (c *Client) SetSlaveID(id byte) {
 func (c *Client) ReadInto(address uint16, v interface{}) error {
 	b := binary.Size(v)
 
-	return c.readBytesInto(address, uint16(b), v)
+	return c.readBytesInto(address, uint16(b)/2, v)
 }
 
 func reconnect(handler *modbus.TCPClientHandler) error {
@@ -61,6 +67,7 @@ func reconnect(handler *modbus.TCPClientHandler) error {
 		return err
 	}
 
+	var i float64
 	for {
 		log.Printf("connecting to %v...", handler.Address)
 		err := handler.Connect()
@@ -69,15 +76,21 @@ func reconnect(handler *modbus.TCPClientHandler) error {
 			return nil
 		}
 
-		log.Println(errors.Wrap(err, "couldn't connect to device").Error())
-		<-time.After(backoffDuration)
+		backoff := math.Min(math.Pow(boBase, i)*bo.Seconds(), boMax.Seconds())
+
+		if backoff < boMax.Seconds() {
+			i++
+		}
+
+		log.Printf("%v, retrying in %vs", errors.Wrap(err, "couldn't connect to device").Error(), backoff)
+		<-time.After(time.Duration(backoff) * time.Second)
 	}
 }
 
 func (c *Client) readBytesInto(address, quantity uint16, data interface{}) error {
 	for {
 		registers, err := c.client.ReadHoldingRegisters(address, quantity)
-		if errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, syscall.EPIPE) {
+		if errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, syscall.EPIPE) || errors.Is(err, io.EOF) {
 			err := reconnect(c.handler)
 			if err != nil {
 				return err

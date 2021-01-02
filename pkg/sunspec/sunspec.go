@@ -77,13 +77,17 @@ func (s *AddressModelScanner) Scan() (map[uint16]uint16, error) {
 	for _, address := range sunsBaseAddresses {
 		val, err := s.Reader.ReadUint32(address)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't read base address: %w", err)
+			continue
 		}
 
 		if val == sunsIdentifier {
 			offset = address + 2
 			break
 		}
+	}
+
+	if offset == 0 {
+		return nil, fmt.Errorf("couldn't find any base address")
 	}
 
 	models := make(map[uint16]uint16)

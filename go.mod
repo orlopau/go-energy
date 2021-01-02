@@ -8,6 +8,7 @@ require (
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/pkg/errors v0.9.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
+	github.com/xiegeo/modbusone v0.2.4-0.20200428173500-797d647e237d
 	go.uber.org/goleak v1.1.10
 	golang.org/x/net v0.0.0-20201216054612-986b41b23924
 	gopkg.in/yaml.v2 v2.2.3 // indirect
