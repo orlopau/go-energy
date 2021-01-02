@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/xiegeo/modbusone"
 )
 
 var byteOrder = binary.BigEndian
@@ -60,7 +61,7 @@ func (m *Mockbus) ReadHoldingRegisters(address, quantity uint16) ([]byte, error)
 	end := start + quantity*2
 
 	if len(m.holdingRegisters) < int(end) {
-		return nil, fmt.Errorf("register does not exist")
+		return nil, modbusone.EcIllegalDataAddress
 	}
 
 	return m.holdingRegisters[start:end], nil
@@ -72,7 +73,7 @@ func (m *Mockbus) ReadHoldingRegistersUint(address, quantity uint16) ([]uint16, 
 		return nil, err
 	}
 
-	uints := make([]uint16, len(regs)/2)
+	uints := make([]uint16, quantity)
 	for i := range uints {
 		start := i * 2
 		end := start + 2
